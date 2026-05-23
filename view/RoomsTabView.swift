@@ -118,9 +118,13 @@ private extension RoomsTabView {
 
                         VStack(alignment: .leading) {
                             Text(room.title)
-                            Text(room.type.title)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+
+                            HStack(spacing: 6) {
+                                Text(room.type.title)
+                                Text(itemCountTitle(for: room.items.count))
+                            }
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                         }
                     }
                 }
@@ -183,5 +187,9 @@ private extension RoomsTabView {
 
     func deleteRooms(_ roomsToDelete: [Room]) {
         roomRepository.deleteRooms(roomsToDelete)
+    }
+
+    func itemCountTitle(for count: Int) -> String {
+        count == 1 ? "1 item" : "\(count) items"
     }
 }

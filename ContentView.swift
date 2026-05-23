@@ -64,5 +64,5 @@ struct ContentView: View {
 #Preview {
     ContentView()
         .environment(\.appDependencies, .preview)
-        .modelContainer(for: Room.self, inMemory: true)
+        .modelContainer(for: [Room.self, RoomItem.self], inMemory: true)
 }

@@ -14,6 +14,7 @@ final class Room {
     var type: RoomType
     var color: RoomColor
     var createdAt: Date
+    @Relationship(deleteRule: .cascade, inverse: \RoomItem.room) var items: [RoomItem] = []
 
     init(
         id: UUID = UUID(),

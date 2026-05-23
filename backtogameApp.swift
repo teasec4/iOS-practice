@@ -17,6 +17,6 @@ struct backtogameApp: App {
             RootView()
                 .environment(\.appDependencies, dependencies)
         }
-        .modelContainer(for: Room.self)
+        .modelContainer(for: [Room.self, RoomItem.self])
     }
 }

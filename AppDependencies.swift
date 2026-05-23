@@ -10,6 +10,7 @@ import SwiftUI
 struct AppDependencies: Sendable {
     let weatherService: any WeatherService
     let makeRoomRepository: @MainActor @Sendable (ModelContext) -> any RoomRepository
+    let makeRoomItemRepository: @MainActor @Sendable (ModelContext) -> any RoomItemRepository
 }
 
 extension AppDependencies {
@@ -17,6 +18,9 @@ extension AppDependencies {
         weatherService: OpenMeteoWeatherService(),
         makeRoomRepository: { modelContext in
             SwiftDataRoomRepository(modelContext: modelContext)
+        },
+        makeRoomItemRepository: { modelContext in
+            SwiftDataRoomItemRepository(modelContext: modelContext)
         }
     )
 
@@ -24,6 +28,9 @@ extension AppDependencies {
         weatherService: MockWeatherService(),
         makeRoomRepository: { modelContext in
             SwiftDataRoomRepository(modelContext: modelContext)
+        },
+        makeRoomItemRepository: { modelContext in
+            SwiftDataRoomItemRepository(modelContext: modelContext)
         }
     )
 }

@@ -12,6 +12,7 @@ struct OnboardingFlowView: View {
     @State private var step: OnboardingStep = .welcome
     @State private var currentQuestionIndex = 0
     @State private var answers: [String: OnboardingAnswerOption] = [:]
+    @State private var analysisProgress = 0.0
     @State private var analysisTask: Task<Void, Never>?
 
     private let questions = OnboardingQuestion.defaultQuestions
@@ -45,7 +46,7 @@ struct OnboardingFlowView: View {
                 )
                 .transition(.move(edge: .trailing).combined(with: .opacity))
             case .analyzing:
-                AnalyzingOnboardingView()
+                AnalyzingOnboardingView(progress: analysisProgress)
                     .transition(.opacity)
             }
         }
@@ -80,16 +81,24 @@ struct OnboardingFlowView: View {
     }
 
     private func startAnalysis() {
+        analysisProgress = 0
+
         withAnimation {
             step = .analyzing
         }
 
         analysisTask?.cancel()
         analysisTask = Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 5_000_000_000)
+            for progressStep in 1...100 {
+                try? await Task.sleep(nanoseconds: 50_000_000)
 
-            guard !Task.isCancelled else {
-                return
+                guard !Task.isCancelled else {
+                    return
+                }
+
+                withAnimation(.linear(duration: 0.05)) {
+                    analysisProgress = Double(progressStep) / 100
+                }
             }
 
             onComplete()
@@ -258,8 +267,29 @@ private struct OnboardingOptionButton: View {
 }
 
 private struct AnalyzingOnboardingView: View {
+    let progress: Double
+
+    private var percentage: Int {
+        Int((progress * 100).rounded())
+    }
+
+    private var statusTitle: String {
+        switch percentage {
+        case 0..<20:
+            "Reading your room priorities"
+        case 20..<45:
+            "Understanding your home style"
+        case 45..<70:
+            "Matching item categories"
+        case 70..<95:
+            "Preparing your first setup"
+        default:
+            "Almost ready"
+        }
+    }
+
     var body: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 28) {
             Spacer()
 
             Image(systemName: "wand.and.sparkles")
@@ -269,19 +299,26 @@ private struct AnalyzingOnboardingView: View {
                 .background(.blue, in: Circle())
 
             VStack(spacing: 10) {
-                Text("Analyzing your answers")
+                Text("Analyzing your profile")
                     .font(.title)
                     .fontWeight(.bold)
                     .multilineTextAlignment(.center)
 
-                Text("Preparing a personalized room setup for your first session.")
+                Text(statusTitle)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
 
-            ProgressView()
-                .controlSize(.large)
-                .padding(.top, 8)
+            VStack(spacing: 12) {
+                Text("\(percentage)%")
+                    .font(.system(size: 44, weight: .bold, design: .rounded))
+                    .contentTransition(.numericText())
+
+                ProgressView(value: progress, total: 1)
+                    .progressViewStyle(.linear)
+                    .tint(.blue)
+            }
+            .padding(.top, 4)
 
             Spacer()
         }

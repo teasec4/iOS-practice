@@ -29,5 +29,5 @@ struct RootView: View {
 #Preview {
     RootView()
         .environment(\.appDependencies, .preview)
-        .modelContainer(for: Room.self, inMemory: true)
+        .modelContainer(for: [Room.self, RoomItem.self], inMemory: true)
 }
