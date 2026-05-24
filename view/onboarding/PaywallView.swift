@@ -1,0 +1,190 @@
+//
+//  PaywallView.swift
+//  backtogame
+//
+//  Created by Максим Ковалев on 5/24/26.
+//
+import SwiftUI
+
+struct PaywallView: View {
+    let title: String
+    let subtitle: String
+    let onStartTrial: () -> Void
+    let onContinueFree: () -> Void
+
+    init(
+        title: String = "Your room profile is ready",
+        subtitle: String = "Unlock a personalized plan and smarter recommendations for every room.",
+        onStartTrial: @escaping () -> Void,
+        onContinueFree: @escaping () -> Void
+    ) {
+        self.title = title
+        self.subtitle = subtitle
+        self.onStartTrial = onStartTrial
+        self.onContinueFree = onContinueFree
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Spacer()
+
+                Button {
+                    onContinueFree()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.headline)
+                        .frame(width: 38, height: 38)
+                }
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.circle)
+                .accessibilityLabel("Continue with free version")
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+
+            ScrollView {
+                VStack(spacing: 24) {
+                    VStack(spacing: 14) {
+                        Image(systemName: "sparkles.rectangle.stack")
+                            .font(.system(size: 52, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(width: 104, height: 104)
+                            .background(.blue, in: Circle())
+
+                        VStack(spacing: 8) {
+                            Text(title)
+                                .font(.largeTitle)
+                                .fontWeight(.bold)
+                                .multilineTextAlignment(.center)
+
+                            Text(subtitle)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        PaywallBenefitRow(
+                            systemImage: "wand.and.sparkles",
+                            title: "Personalized room plan",
+                            subtitle: "Get focused next steps based on your answers."
+                        )
+                        PaywallBenefitRow(
+                            systemImage: "square.grid.2x2",
+                            title: "Unlimited rooms and items",
+                            subtitle: "Track everything without free-plan limits."
+                        )
+                        PaywallBenefitRow(
+                            systemImage: "chart.bar.xaxis",
+                            title: "Advanced home analytics",
+                            subtitle: "See what is improving and what needs attention."
+                        )
+                    }
+
+                    VStack(spacing: 10) {
+                        PlanComparisonRow(title: "Rooms", freeValue: "Basic", proValue: "Unlimited")
+                        PlanComparisonRow(title: "Items", freeValue: "Basic list", proValue: "Smart tracking")
+                        PlanComparisonRow(title: "Analysis", freeValue: "Preview", proValue: "Personalized")
+                        PlanComparisonRow(title: "Recommendations", freeValue: "Manual", proValue: "Guided")
+                    }
+                }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 18)
+            }
+
+            VStack(spacing: 12) {
+                Button {
+                    onStartTrial()
+                } label: {
+                    Label("Start 7-day free trial", systemImage: "crown")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+
+                Text("7 days free, then $9/week. Auto-renews. Cancel anytime.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+
+                Button {
+                    onContinueFree()
+                } label: {
+                    Text("Continue with free version")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(24)
+            .background(.regularMaterial)
+        }
+        .background(Color(.systemGroupedBackground))
+    }
+}
+
+private struct PaywallBenefitRow: View {
+    let systemImage: String
+    let title: String
+    let subtitle: String
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Image(systemName: systemImage)
+                .font(.headline)
+                .foregroundStyle(.blue)
+                .frame(width: 36, height: 36)
+                .background(Color.blue.opacity(0.12), in: Circle())
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.headline)
+
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+        }
+        .padding(14)
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+private struct PlanComparisonRow: View {
+    let title: String
+    let freeValue: String
+    let proValue: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(title)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            Text(freeValue)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(width: 88, alignment: .leading)
+
+            Label(proValue, systemImage: "checkmark.circle.fill")
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundStyle(.blue)
+                .frame(width: 116, alignment: .leading)
+        }
+        .padding(14)
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+#Preview {
+    PaywallView(
+        onStartTrial: {},
+        onContinueFree: {}
+    )
+}

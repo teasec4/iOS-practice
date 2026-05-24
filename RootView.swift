@@ -9,15 +9,18 @@ import SwiftData
 
 struct RootView: View {
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+    @AppStorage("isProUser") private var isProUser = false
 
     var body: some View {
         Group {
             if hasCompletedOnboarding {
                 ContentView {
+                    isProUser = false
                     hasCompletedOnboarding = false
                 }
             } else {
-                OnboardingFlowView {
+                OnboardingFlowView { didStartTrial in
+                    isProUser = didStartTrial
                     hasCompletedOnboarding = true
                 }
             }

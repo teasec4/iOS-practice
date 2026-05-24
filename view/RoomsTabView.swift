@@ -8,14 +8,19 @@ import SwiftUI
 import SwiftData
 
 struct RoomsTabView: View {
+    private static let freeRoomLimit = 4
+
     @Environment(\.modelContext) private var modelContext
     @Environment(\.appDependencies) private var dependencies
+    @AppStorage("isProUser") private var isProUser = false
     @Query(sort: \Room.createdAt) private var rooms: [Room]
 
     @State private var openModalSheet: Bool = false
     @State private var roomToEdit: Room?
     @State private var searchText: String = ""
     @State private var selectedRoomType: RoomType?
+    @State private var pendingRoomDraft: RoomDraft?
+    @State private var isShowingRoomLimitPaywall = false
 
     var filteredRooms: [Room] {
         let trimmedSearchText = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -88,9 +93,33 @@ struct RoomsTabView: View {
             )
             .presentationDetents([.medium])
         }
+        .fullScreenCover(isPresented: $isShowingRoomLimitPaywall) {
+            PaywallView(
+                title: "Unlock unlimited rooms",
+                subtitle: "Free plans can create up to \(Self.freeRoomLimit) rooms. Start Pro to save this room and keep building your home setup.",
+                onStartTrial: {
+                    unlockProAndCreatePendingRoom()
+                },
+                onContinueFree: {
+                    discardPendingRoom()
+                }
+            )
+        }
     }
 
     func saveNewRoom(draft: RoomDraft) {
+        guard canCreateRoomWithoutPaywall else {
+            pendingRoomDraft = draft
+            openModalSheet = false
+
+            Task { @MainActor in
+                await Task.yield()
+                isShowingRoomLimitPaywall = true
+            }
+
+            return
+        }
+
         roomRepository.createRoom(from: draft)
         openModalSheet = false
     }
@@ -103,6 +132,26 @@ struct RoomsTabView: View {
     func clearFilters() {
         searchText = ""
         selectedRoomType = nil
+    }
+
+    var canCreateRoomWithoutPaywall: Bool {
+        isProUser || rooms.count < Self.freeRoomLimit
+    }
+
+    func unlockProAndCreatePendingRoom() {
+        isProUser = true
+        isShowingRoomLimitPaywall = false
+
+        if let pendingRoomDraft {
+            roomRepository.createRoom(from: pendingRoomDraft)
+        }
+
+        pendingRoomDraft = nil
+    }
+
+    func discardPendingRoom() {
+        pendingRoomDraft = nil
+        isShowingRoomLimitPaywall = false
     }
 }
 

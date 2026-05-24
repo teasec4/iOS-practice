@@ -7,7 +7,7 @@
 import SwiftUI
 
 struct OnboardingFlowView: View {
-    let onComplete: () -> Void
+    let onComplete: (Bool) -> Void
 
     @State private var step: OnboardingStep = .welcome
     @State private var currentQuestionIndex = 0
@@ -48,6 +48,16 @@ struct OnboardingFlowView: View {
             case .analyzing:
                 AnalyzingOnboardingView(progress: analysisProgress)
                     .transition(.opacity)
+            case .paywall:
+                PaywallView(
+                    onStartTrial: {
+                        onComplete(true)
+                    },
+                    onContinueFree: {
+                        onComplete(false)
+                    }
+                )
+                .transition(.move(edge: .trailing).combined(with: .opacity))
             }
         }
         .onDisappear {
@@ -101,7 +111,9 @@ struct OnboardingFlowView: View {
                 }
             }
 
-            onComplete()
+            withAnimation {
+                step = .paywall
+            }
         }
     }
 }
@@ -110,6 +122,7 @@ private enum OnboardingStep {
     case welcome
     case questions
     case analyzing
+    case paywall
 }
 
 private struct WelcomeOnboardingView: View {
@@ -327,5 +340,5 @@ private struct AnalyzingOnboardingView: View {
 }
 
 #Preview {
-    OnboardingFlowView {}
+    OnboardingFlowView { _ in }
 }
