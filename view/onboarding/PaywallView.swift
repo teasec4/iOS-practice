@@ -12,6 +12,9 @@ struct PaywallView: View {
     let onStartTrial: () -> Void
     let onContinueFree: () -> Void
 
+    @Environment(SubscriptionManager.self) private var subscriptionManager
+    @State private var isLoadingPurchase = false
+
     init(
         title: String = "Your room profile is ready",
         subtitle: String = "Unlock a personalized plan and smarter recommendations for every room.",
@@ -34,7 +37,7 @@ struct PaywallView: View {
                 } label: {
                     Image(systemName: "xmark")
                         .font(.headline)
-                        .frame(width: 38, height: 38)
+                        .frame(width: 44, height: 44)
                 }
                 .buttonStyle(.bordered)
                 .buttonBorderShape(.circle)
@@ -95,19 +98,50 @@ struct PaywallView: View {
 
             VStack(spacing: 12) {
                 Button {
-                    onStartTrial()
+                    Task {
+                        isLoadingPurchase = true
+                        defer { isLoadingPurchase = false }
+
+                        let didPurchase = await subscriptionManager.purchasePro()
+
+                        if didPurchase {
+                            onStartTrial()
+                        }
+                    }
                 } label: {
-                    Label("Start 7-day free trial", systemImage: "crown")
+                    Label(primaryButtonTitle, systemImage: "crown")
                         .font(.headline)
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
+                .disabled(isLoadingPurchase || !subscriptionManager.canStartPurchase)
 
-                Text("7 days free, then $9/week. Auto-renews. Cancel anytime.")
+                Text(priceSubtitle)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
+
+                if let errorMessage = subscriptionManager.errorMessage {
+                    Text(errorMessage)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+
+                if subscriptionManager.errorMessage != nil {
+                    Button {
+                        Task {
+                            await subscriptionManager.loadProducts()
+                        }
+                    } label: {
+                        Label("Retry loading subscription", systemImage: "arrow.clockwise")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
 
                 Button {
                     onContinueFree()
@@ -122,6 +156,29 @@ struct PaywallView: View {
             .background(.regularMaterial)
         }
         .background(Color(.systemGroupedBackground))
+        .task {
+            await subscriptionManager.loadProducts()
+        }
+    }
+
+    private var primaryButtonTitle: String {
+        if isLoadingPurchase {
+            return "Starting trial"
+        }
+
+        if subscriptionManager.isLoadingProducts {
+            return "Loading subscription"
+        }
+
+        return "Start 7-day free trial"
+    }
+
+    private var priceSubtitle: String {
+        if subscriptionManager.proProduct == nil {
+            return "7 days free, then $9/week. Auto-renews. Cancel anytime."
+        }
+
+        return "7 days free, then \(subscriptionManager.proPriceTitle). Auto-renews. Cancel anytime."
     }
 }
 
@@ -187,4 +244,5 @@ private struct PlanComparisonRow: View {
         onStartTrial: {},
         onContinueFree: {}
     )
+    .environment(SubscriptionManager.preview())
 }

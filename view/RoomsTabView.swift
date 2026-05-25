@@ -8,11 +8,9 @@ import SwiftUI
 import SwiftData
 
 struct RoomsTabView: View {
-    private static let freeRoomLimit = 4
-
     @Environment(\.modelContext) private var modelContext
     @Environment(\.appDependencies) private var dependencies
-    @AppStorage("isProUser") private var isProUser = false
+    @Environment(SubscriptionManager.self) private var subscriptionManager
     @Query(sort: \Room.createdAt) private var rooms: [Room]
 
     @State private var openModalSheet: Bool = false
@@ -96,9 +94,9 @@ struct RoomsTabView: View {
         .fullScreenCover(isPresented: $isShowingRoomLimitPaywall) {
             PaywallView(
                 title: "Unlock unlimited rooms",
-                subtitle: "Free plans can create up to \(Self.freeRoomLimit) rooms. Start Pro to save this room and keep building your home setup.",
+                subtitle: "Free plans can create up to \(AppPlan.freeRoomLimit) rooms. Start Pro to save this room and keep building your home setup.",
                 onStartTrial: {
-                    unlockProAndCreatePendingRoom()
+                    createPendingRoomAfterPurchase()
                 },
                 onContinueFree: {
                     discardPendingRoom()
@@ -135,11 +133,10 @@ struct RoomsTabView: View {
     }
 
     var canCreateRoomWithoutPaywall: Bool {
-        isProUser || rooms.count < Self.freeRoomLimit
+        subscriptionManager.isProUser || rooms.count < AppPlan.freeRoomLimit
     }
 
-    func unlockProAndCreatePendingRoom() {
-        isProUser = true
+    func createPendingRoomAfterPurchase() {
         isShowingRoomLimitPaywall = false
 
         if let pendingRoomDraft {
@@ -158,6 +155,12 @@ struct RoomsTabView: View {
 private extension RoomsTabView {
     var roomsList: some View {
         List {
+            if !subscriptionManager.isProUser {
+                Section {
+                    freePlanLimitBanner
+                }
+            }
+
             ForEach(filteredRooms) { room in
                 NavigationLink(destination: RoomView(room: room)) {
                     HStack(spacing: 12) {
@@ -191,6 +194,43 @@ private extension RoomsTabView {
                 deleteRooms(roomsToDelete)
             }
         }
+    }
+
+    var freePlanLimitBanner: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                Image(systemName: roomsRemaining > 0 ? "house" : "lock")
+                    .font(.headline)
+                    .foregroundStyle(.blue)
+                    .frame(width: 34, height: 34)
+                    .background(Color.blue.opacity(0.12), in: Circle())
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(roomLimitTitle)
+                        .font(.headline)
+
+                    Text(roomLimitSubtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+            }
+
+            ProgressView(value: roomLimitProgress, total: 1)
+                .tint(roomLimitProgress >= 1 ? .orange : .blue)
+
+            Button {
+                isShowingRoomLimitPaywall = true
+            } label: {
+                Label("Unlock unlimited rooms", systemImage: "crown")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+        }
+        .padding(.vertical, 6)
     }
 
     var emptyRoomsView: some View {
@@ -240,5 +280,29 @@ private extension RoomsTabView {
 
     func itemCountTitle(for count: Int) -> String {
         count == 1 ? "1 item" : "\(count) items"
+    }
+
+    var roomsRemaining: Int {
+        max(0, AppPlan.freeRoomLimit - rooms.count)
+    }
+
+    var roomLimitProgress: Double {
+        Double(min(rooms.count, AppPlan.freeRoomLimit)) / Double(AppPlan.freeRoomLimit)
+    }
+
+    var roomLimitTitle: String {
+        if roomsRemaining == 0 {
+            return "Free room limit reached"
+        }
+
+        if roomsRemaining == 1 {
+            return "1 free room left"
+        }
+
+        return "\(roomsRemaining) free rooms left"
+    }
+
+    var roomLimitSubtitle: String {
+        "\(rooms.count) of \(AppPlan.freeRoomLimit) rooms used on the free plan."
     }
 }

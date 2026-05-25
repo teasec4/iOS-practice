@@ -7,7 +7,7 @@
 import SwiftUI
 
 struct OnboardingFlowView: View {
-    let onComplete: (Bool) -> Void
+    let onComplete: (UserProfile) -> Void
 
     @State private var step: OnboardingStep = .welcome
     @State private var currentQuestionIndex = 0
@@ -51,10 +51,10 @@ struct OnboardingFlowView: View {
             case .paywall:
                 PaywallView(
                     onStartTrial: {
-                        onComplete(true)
+                        completeOnboarding()
                     },
                     onContinueFree: {
-                        onComplete(false)
+                        completeOnboarding()
                     }
                 )
                 .transition(.move(edge: .trailing).combined(with: .opacity))
@@ -115,6 +115,10 @@ struct OnboardingFlowView: View {
                 step = .paywall
             }
         }
+    }
+
+    private func completeOnboarding() {
+        onComplete(UserProfile.make(from: answers))
     }
 }
 
@@ -341,4 +345,5 @@ private struct AnalyzingOnboardingView: View {
 
 #Preview {
     OnboardingFlowView { _ in }
+        .environment(SubscriptionManager.preview())
 }
