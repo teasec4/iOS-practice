@@ -13,7 +13,6 @@ struct PaywallView: View {
     let onContinueFree: () -> Void
 
     @Environment(SubscriptionManager.self) private var subscriptionManager
-    @State private var isLoadingPurchase = false
 
     init(
         title: String = "Your room profile is ready",
@@ -99,9 +98,6 @@ struct PaywallView: View {
             VStack(spacing: 12) {
                 Button {
                     Task {
-                        isLoadingPurchase = true
-                        defer { isLoadingPurchase = false }
-
                         let didPurchase = await subscriptionManager.purchasePro()
 
                         if didPurchase {
@@ -115,7 +111,7 @@ struct PaywallView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
-                .disabled(isLoadingPurchase || !subscriptionManager.canStartPurchase)
+                .disabled(!subscriptionManager.canStartPurchase)
 
                 Text(priceSubtitle)
                     .font(.footnote)
@@ -162,7 +158,7 @@ struct PaywallView: View {
     }
 
     private var primaryButtonTitle: String {
-        if isLoadingPurchase {
+        if subscriptionManager.isPurchasing {
             return "Starting trial"
         }
 

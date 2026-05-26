@@ -9,6 +9,7 @@ import SwiftUI
 
 struct AppDependencies: Sendable {
     let weatherService: any WeatherService
+    let purchaseService: any PurchaseService
     let makeRoomRepository: @MainActor @Sendable (ModelContext) -> any RoomRepository
     let makeRoomItemRepository: @MainActor @Sendable (ModelContext) -> any RoomItemRepository
 }
@@ -16,6 +17,7 @@ struct AppDependencies: Sendable {
 extension AppDependencies {
     static let live = AppDependencies(
         weatherService: OpenMeteoWeatherService(),
+        purchaseService: StoreKitPurchaseService(),
         makeRoomRepository: { modelContext in
             SwiftDataRoomRepository(modelContext: modelContext)
         },
@@ -26,6 +28,7 @@ extension AppDependencies {
 
     static let preview = AppDependencies(
         weatherService: MockWeatherService(),
+        purchaseService: PreviewPurchaseService(),
         makeRoomRepository: { modelContext in
             SwiftDataRoomRepository(modelContext: modelContext)
         },
@@ -35,10 +38,12 @@ extension AppDependencies {
     )
 }
 
+// regestration env key for dependensies
 private struct AppDependenciesKey: EnvironmentKey {
     static let defaultValue = AppDependencies.live
 }
 
+// easy way to get a value .environment(\.appDependencies, .live)
 extension EnvironmentValues {
     var appDependencies: AppDependencies {
         get { self[AppDependenciesKey.self] }

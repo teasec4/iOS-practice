@@ -64,5 +64,6 @@ struct ContentView: View {
 #Preview {
     ContentView()
         .environment(\.appDependencies, .preview)
+        .environment(SubscriptionManager.preview())
         .modelContainer(for: [Room.self, RoomItem.self], inMemory: true)
 }

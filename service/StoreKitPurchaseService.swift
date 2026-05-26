@@ -15,12 +15,6 @@ struct StoreKitPurchaseService: PurchaseService {
         #if DEBUG
         print("STOREKIT requested product IDs:", requestedProductIDs)
         print("STOREKIT returned product IDs:", products.map(\.id))
-
-        if products.isEmpty {
-            let hasBundledConfiguration = Bundle.main.url(forResource: "BackToGame", withExtension: "storekit") != nil
-            print("STOREKIT bundled configuration exists:", hasBundledConfiguration)
-            print("STOREKIT bundle identifier:", Bundle.main.bundleIdentifier ?? "unknown")
-        }
         #endif
 
         return products

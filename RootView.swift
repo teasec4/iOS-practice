@@ -9,18 +9,18 @@ import SwiftData
 
 struct RootView: View {
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
-    @AppStorage("isProUser") private var isProUser = false
+    @AppStorage("userProfileData") private var userProfileData = ""
 
     var body: some View {
         Group {
             if hasCompletedOnboarding {
                 ContentView {
-                    isProUser = false
+                    userProfileData = ""
                     hasCompletedOnboarding = false
                 }
             } else {
-                OnboardingFlowView { didStartTrial in
-                    isProUser = didStartTrial
+                OnboardingFlowView { userProfile in
+                    userProfileData = userProfile.encoded()
                     hasCompletedOnboarding = true
                 }
             }
@@ -32,5 +32,6 @@ struct RootView: View {
 #Preview {
     RootView()
         .environment(\.appDependencies, .preview)
+        .environment(SubscriptionManager.preview())
         .modelContainer(for: [Room.self, RoomItem.self], inMemory: true)
 }
