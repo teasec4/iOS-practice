@@ -10,23 +10,65 @@ import SwiftData
 struct RootView: View {
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @AppStorage("userProfileData") private var userProfileData = ""
+    @State private var rootState: RootState = .splash
 
     var body: some View {
         Group {
-            if hasCompletedOnboarding {
+            switch rootState {
+            case .splash:
+                SplashView()
+            case .main:
                 ContentView {
                     userProfileData = ""
                     hasCompletedOnboarding = false
+                    rootState = .onboarding
                 }
-            } else {
+                .transition(.opacity)
+            case .onboarding:
                 OnboardingFlowView { userProfile in
                     userProfileData = userProfile.encoded()
                     hasCompletedOnboarding = true
+                    rootState = .main
                 }
+                .transition(.opacity)
             }
         }
-        .animation(.smooth, value: hasCompletedOnboarding)
+        .animation(.smooth, value: rootState)
+        .task {
+            await finishSplash()
+        }
+        .onChange(of: hasCompletedOnboarding) {
+            guard rootState != .splash else {
+                return
+            }
+
+            rootState = currentDestination
+        }
     }
+
+    private var currentDestination: RootState {
+        hasCompletedOnboarding ? .main : .onboarding
+    }
+
+    private func finishSplash() async {
+        guard rootState == .splash else {
+            return
+        }
+
+        try? await Task.sleep(nanoseconds: 1_700_000_000)
+
+        guard !Task.isCancelled else {
+            return
+        }
+
+        rootState = currentDestination
+    }
+}
+
+private enum RootState {
+    case splash
+    case onboarding
+    case main
 }
 
 #Preview {
