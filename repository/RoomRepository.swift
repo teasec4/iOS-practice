@@ -9,10 +9,10 @@ import SwiftData
 
 @MainActor
 protocol RoomRepository {
-    func createRoom(from draft: RoomDraft)
-    func updateRoom(_ room: Room, with draft: RoomDraft)
-    func deleteRooms(_ rooms: [Room])
-    func seedSampleRoomsIfNeeded(existingRooms: [Room])
+    func createRoom(from draft: RoomDraft) throws
+    func updateRoom(_ room: Room, with draft: RoomDraft) throws
+    func deleteRooms(_ rooms: [Room]) throws
+    func seedSampleRoomsIfNeeded(existingRooms: [Room]) throws
 }
 
 @MainActor
@@ -23,28 +23,28 @@ struct SwiftDataRoomRepository: RoomRepository {
         self.modelContext = modelContext
     }
 
-    func createRoom(from draft: RoomDraft) {
+    func createRoom(from draft: RoomDraft) throws {
         let room = Room(title: draft.title, type: draft.type, color: draft.color)
         modelContext.insert(room)
-        save()
+        try save()
     }
 
-    func updateRoom(_ room: Room, with draft: RoomDraft) {
+    func updateRoom(_ room: Room, with draft: RoomDraft) throws {
         room.title = draft.title
         room.type = draft.type
         room.color = draft.color
-        save()
+        try save()
     }
 
-    func deleteRooms(_ rooms: [Room]) {
+    func deleteRooms(_ rooms: [Room]) throws {
         for room in rooms {
             modelContext.delete(room)
         }
 
-        save()
+        try save()
     }
 
-    func seedSampleRoomsIfNeeded(existingRooms: [Room]) {
+    func seedSampleRoomsIfNeeded(existingRooms: [Room]) throws {
         guard existingRooms.isEmpty else {
             return
         }
@@ -53,10 +53,10 @@ struct SwiftDataRoomRepository: RoomRepository {
             modelContext.insert(room)
         }
 
-        save()
+        try save()
     }
 
-    private func save() {
-        try? modelContext.save()
+    private func save() throws {
+        try modelContext.save()
     }
 }

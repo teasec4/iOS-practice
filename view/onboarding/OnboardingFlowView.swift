@@ -38,11 +38,9 @@ struct OnboardingFlowView: View {
                     selectedOption: answers[questions[currentQuestionIndex].id],
                     canGoBack: currentQuestionIndex > 0,
                     isLastQuestion: currentQuestionIndex == questions.count - 1,
-                    onSelect: { option in
-                        answers[questions[currentQuestionIndex].id] = option
-                    },
+                    onSelect: selectAnswer,
                     onBack: goToPreviousQuestion,
-                    onNext: goToNextQuestion
+                    onAnalyze: startAnalysis
                 )
                 .transition(.move(edge: .trailing).combined(with: .opacity))
             case .analyzing:
@@ -75,17 +73,14 @@ struct OnboardingFlowView: View {
         }
     }
 
-    private func goToNextQuestion() {
-        guard answers[questions[currentQuestionIndex].id] != nil else {
-            return
-        }
+    private func selectAnswer(_ option: OnboardingAnswerOption) {
+        answers[questions[currentQuestionIndex].id] = option
 
         guard currentQuestionIndex < questions.count - 1 else {
-            startAnalysis()
             return
         }
 
-        withAnimation {
+        withAnimation(.snappy) {
             currentQuestionIndex += 1
         }
     }
@@ -181,7 +176,7 @@ private struct QuestionnaireOnboardingView: View {
     let isLastQuestion: Bool
     let onSelect: (OnboardingAnswerOption) -> Void
     let onBack: () -> Void
-    let onNext: () -> Void
+    let onAnalyze: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
@@ -209,9 +204,7 @@ private struct QuestionnaireOnboardingView: View {
                         option: option,
                         isSelected: selectedOption == option
                     ) {
-                        withAnimation(.snappy) {
-                            onSelect(option)
-                        }
+                        onSelect(option)
                     }
                 }
             }
@@ -229,16 +222,18 @@ private struct QuestionnaireOnboardingView: View {
                 .disabled(!canGoBack)
                 .accessibilityLabel("Previous question")
 
-                Button {
-                    onNext()
-                } label: {
-                    Label(isLastQuestion ? "Analyze" : "Next", systemImage: "arrow.right")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 42)
+                if isLastQuestion {
+                    Button {
+                        onAnalyze()
+                    } label: {
+                        Label("Analyze", systemImage: "wand.and.sparkles")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 42)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(selectedOption == nil)
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(selectedOption == nil)
             }
         }
         .padding(24)

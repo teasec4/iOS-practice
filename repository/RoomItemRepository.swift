@@ -9,9 +9,9 @@ import SwiftData
 
 @MainActor
 protocol RoomItemRepository {
-    func createItem(in room: Room, from draft: RoomItemDraft)
-    func updateItem(_ item: RoomItem, with draft: RoomItemDraft)
-    func deleteItems(_ items: [RoomItem])
+    func createItem(in room: Room, from draft: RoomItemDraft) throws
+    func updateItem(_ item: RoomItem, with draft: RoomItemDraft) throws
+    func deleteItems(_ items: [RoomItem]) throws
 }
 
 @MainActor
@@ -22,7 +22,7 @@ struct SwiftDataRoomItemRepository: RoomItemRepository {
         self.modelContext = modelContext
     }
 
-    func createItem(in room: Room, from draft: RoomItemDraft) {
+    func createItem(in room: Room, from draft: RoomItemDraft) throws {
         let item = RoomItem(
             title: draft.title,
             category: draft.category,
@@ -32,26 +32,26 @@ struct SwiftDataRoomItemRepository: RoomItemRepository {
 
         modelContext.insert(item)
         room.items.append(item)
-        save()
+        try save()
     }
 
-    func updateItem(_ item: RoomItem, with draft: RoomItemDraft) {
+    func updateItem(_ item: RoomItem, with draft: RoomItemDraft) throws {
         item.title = draft.title
         item.category = draft.category
         item.quantity = draft.quantity
         item.note = draft.note
-        save()
+        try save()
     }
 
-    func deleteItems(_ items: [RoomItem]) {
+    func deleteItems(_ items: [RoomItem]) throws {
         for item in items {
             modelContext.delete(item)
         }
 
-        save()
+        try save()
     }
 
-    private func save() {
-        try? modelContext.save()
+    private func save() throws {
+        try modelContext.save()
     }
 }

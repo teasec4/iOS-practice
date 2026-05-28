@@ -13,17 +13,14 @@ struct RoomView: View {
 
     var room: Room
 
-    @State private var isShowingNewItemSheet = false
-    @State private var itemToEdit: RoomItem?
+    @State private var viewModel = RoomDetailViewModel()
 
     private var roomItemRepository: any RoomItemRepository {
         dependencies.makeRoomItemRepository(modelContext)
     }
 
     private var sortedItems: [RoomItem] {
-        room.items.sorted { firstItem, secondItem in
-            firstItem.createdAt < secondItem.createdAt
-        }
+        viewModel.sortedItems(in: room)
     }
 
     var body: some View {
@@ -35,35 +32,45 @@ struct RoomView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
-                    isShowingNewItemSheet = true
+                    viewModel.isShowingNewItemSheet = true
                 } label: {
                     Image(systemName: "plus")
                 }
                 .accessibilityLabel("Add Item")
             }
         }
-        .sheet(isPresented: $isShowingNewItemSheet) {
+        .onAppear {
+            viewModel.configure(roomItemRepository: roomItemRepository)
+        }
+        .sheet(isPresented: isShowingNewItemSheetBinding) {
             RoomItemForm(
                 onSave: { draft in
-                    createItem(from: draft)
+                    viewModel.createItem(in: room, from: draft)
                 },
                 onCancel: {
-                    isShowingNewItemSheet = false
+                    viewModel.isShowingNewItemSheet = false
                 }
             )
             .presentationDetents([.medium])
         }
-        .sheet(item: $itemToEdit) { item in
+        .sheet(item: itemToEditBinding) { item in
             RoomItemForm(
                 itemToEdit: item,
                 onSave: { draft in
-                    updateItem(item, with: draft)
+                    viewModel.updateItem(item, with: draft)
                 },
                 onCancel: {
-                    itemToEdit = nil
+                    viewModel.itemToEdit = nil
                 }
             )
             .presentationDetents([.medium])
+        }
+        .alert("Could not update items", isPresented: errorAlertBinding) {
+            Button("OK", role: .cancel) {
+                viewModel.clearError()
+            }
+        } message: {
+            Text(viewModel.errorMessage ?? "")
         }
     }
 
@@ -96,7 +103,7 @@ struct RoomView: View {
                     Text("Add the first item in this room.")
                 } actions: {
                     Button("Add Item") {
-                        isShowingNewItemSheet = true
+                        viewModel.isShowingNewItemSheet = true
                     }
                 }
                 .padding(.vertical, 18)
@@ -105,7 +112,7 @@ struct RoomView: View {
                     RoomItemRow(item: item)
                         .swipeActions(edge: .leading) {
                             Button {
-                                itemToEdit = item
+                                viewModel.itemToEdit = item
                             } label: {
                                 Label("Edit", systemImage: "pencil")
                             }
@@ -114,24 +121,36 @@ struct RoomView: View {
                 }
                 .onDelete { offsets in
                     let itemsToDelete = offsets.map { sortedItems[$0] }
-                    deleteItems(itemsToDelete)
+                    viewModel.deleteItems(itemsToDelete)
                 }
             }
         }
     }
 
-    private func createItem(from draft: RoomItemDraft) {
-        roomItemRepository.createItem(in: room, from: draft)
-        isShowingNewItemSheet = false
+    private var isShowingNewItemSheetBinding: Binding<Bool> {
+        Binding {
+            viewModel.isShowingNewItemSheet
+        } set: { isPresented in
+            viewModel.isShowingNewItemSheet = isPresented
+        }
     }
 
-    private func updateItem(_ item: RoomItem, with draft: RoomItemDraft) {
-        roomItemRepository.updateItem(item, with: draft)
-        itemToEdit = nil
+    private var itemToEditBinding: Binding<RoomItem?> {
+        Binding {
+            viewModel.itemToEdit
+        } set: { item in
+            viewModel.itemToEdit = item
+        }
     }
 
-    private func deleteItems(_ items: [RoomItem]) {
-        roomItemRepository.deleteItems(items)
+    private var errorAlertBinding: Binding<Bool> {
+        Binding {
+            viewModel.errorMessage != nil
+        } set: { isPresented in
+            if !isPresented {
+                viewModel.clearError()
+            }
+        }
     }
 }
 

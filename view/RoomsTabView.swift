@@ -13,29 +13,10 @@ struct RoomsTabView: View {
     @Environment(SubscriptionManager.self) private var subscriptionManager
     @Query(sort: \Room.createdAt) private var rooms: [Room]
 
-    @State private var openModalSheet: Bool = false
-    @State private var roomToEdit: Room?
-    @State private var searchText: String = ""
-    @State private var selectedRoomType: RoomType?
-    @State private var pendingRoomDraft: RoomDraft?
-    @State private var isShowingRoomLimitPaywall = false
+    @State private var viewModel = RoomsViewModel()
 
     var filteredRooms: [Room] {
-        let trimmedSearchText = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        return rooms.filter { room in
-            let matchesSearch = trimmedSearchText.isEmpty
-                || room.title.localizedCaseInsensitiveContains(trimmedSearchText)
-                || room.type.title.localizedCaseInsensitiveContains(trimmedSearchText)
-
-            let matchesType = selectedRoomType == nil || room.type == selectedRoomType
-
-            return matchesSearch && matchesType
-        }
-    }
-
-    var hasActiveFilters: Bool {
-        !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || selectedRoomType != nil
+        viewModel.filteredRooms(from: rooms)
     }
 
     private var roomRepository: any RoomRepository {
@@ -54,13 +35,13 @@ struct RoomsTabView: View {
                 }
             }
             .navigationTitle("Rooms")
-            .searchable(text: $searchText, prompt: "Search rooms")
+            .searchable(text: searchTextBinding, prompt: "Search rooms")
             .toolbar {
                 ToolbarItemGroup(placement: .primaryAction) {
                     filterMenu
 
                     Button {
-                        openModalSheet = true
+                        viewModel.isShowingNewRoomSheet = true
                     } label: {
                         Image(systemName: "plus")
                     }
@@ -68,87 +49,55 @@ struct RoomsTabView: View {
                 }
             }
         }
-        .sheet(isPresented: $openModalSheet) {
+        .onAppear {
+            viewModel.configure(roomRepository: roomRepository)
+        }
+        .sheet(isPresented: isShowingNewRoomSheetBinding) {
             NewRoomForm(
                 onSave: { draft in
-                    saveNewRoom(draft: draft)
+                    viewModel.saveNewRoom(
+                        draft: draft,
+                        currentRoomCount: rooms.count,
+                        isProUser: subscriptionManager.isProUser
+                    )
                 },
                 onCancel: {
-                    openModalSheet = false
+                    viewModel.isShowingNewRoomSheet = false
                 }
             )
             .presentationDetents([.medium])
         }
-        .sheet(item: $roomToEdit) { room in
+        .sheet(item: roomToEditBinding) { room in
             NewRoomForm(
                 roomToEdit: room,
                 onSave: { draft in
-                    saveEditedRoom(room: room, draft: draft)
+                    viewModel.saveEditedRoom(room, with: draft)
                 },
                 onCancel: {
-                    roomToEdit = nil
+                    viewModel.roomToEdit = nil
                 }
             )
             .presentationDetents([.medium])
         }
-        .fullScreenCover(isPresented: $isShowingRoomLimitPaywall) {
+        .fullScreenCover(isPresented: isShowingRoomLimitPaywallBinding) {
             PaywallView(
                 title: "Unlock unlimited rooms",
                 subtitle: "Free plans can create up to \(AppPlan.freeRoomLimit) rooms. Start Pro to save this room and keep building your home setup.",
                 onStartTrial: {
-                    createPendingRoomAfterPurchase()
+                    viewModel.createPendingRoomAfterPurchase()
                 },
                 onContinueFree: {
-                    discardPendingRoom()
+                    viewModel.discardPendingRoom()
                 }
             )
         }
-    }
-
-    func saveNewRoom(draft: RoomDraft) {
-        guard canCreateRoomWithoutPaywall else {
-            pendingRoomDraft = draft
-            openModalSheet = false
-
-            Task { @MainActor in
-                await Task.yield()
-                isShowingRoomLimitPaywall = true
+        .alert("Could not update rooms", isPresented: errorAlertBinding) {
+            Button("OK", role: .cancel) {
+                viewModel.clearError()
             }
-
-            return
+        } message: {
+            Text(viewModel.errorMessage ?? "")
         }
-
-        roomRepository.createRoom(from: draft)
-        openModalSheet = false
-    }
-
-    func saveEditedRoom(room: Room, draft: RoomDraft) {
-        roomRepository.updateRoom(room, with: draft)
-        roomToEdit = nil
-    }
-
-    func clearFilters() {
-        searchText = ""
-        selectedRoomType = nil
-    }
-
-    var canCreateRoomWithoutPaywall: Bool {
-        subscriptionManager.isProUser || rooms.count < AppPlan.freeRoomLimit
-    }
-
-    func createPendingRoomAfterPurchase() {
-        isShowingRoomLimitPaywall = false
-
-        if let pendingRoomDraft {
-            roomRepository.createRoom(from: pendingRoomDraft)
-        }
-
-        pendingRoomDraft = nil
-    }
-
-    func discardPendingRoom() {
-        pendingRoomDraft = nil
-        isShowingRoomLimitPaywall = false
     }
 }
 
@@ -182,7 +131,7 @@ private extension RoomsTabView {
                 }
                 .swipeActions(edge: .leading) {
                     Button {
-                        roomToEdit = room
+                        viewModel.roomToEdit = room
                     } label: {
                         Label("Edit", systemImage: "pencil")
                     }
@@ -199,17 +148,17 @@ private extension RoomsTabView {
     var freePlanLimitBanner: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 12) {
-                Image(systemName: roomsRemaining > 0 ? "house" : "lock")
+                Image(systemName: viewModel.roomsRemaining(currentRoomCount: rooms.count) > 0 ? "house" : "lock")
                     .font(.headline)
                     .foregroundStyle(.blue)
                     .frame(width: 34, height: 34)
                     .background(Color.blue.opacity(0.12), in: Circle())
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(roomLimitTitle)
+                    Text(viewModel.roomLimitTitle(currentRoomCount: rooms.count))
                         .font(.headline)
 
-                    Text(roomLimitSubtitle)
+                    Text(viewModel.roomLimitSubtitle(currentRoomCount: rooms.count))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -217,11 +166,11 @@ private extension RoomsTabView {
                 Spacer()
             }
 
-            ProgressView(value: roomLimitProgress, total: 1)
-                .tint(roomLimitProgress >= 1 ? .orange : .blue)
+            ProgressView(value: viewModel.roomLimitProgress(currentRoomCount: rooms.count), total: 1)
+                .tint(viewModel.roomLimitProgress(currentRoomCount: rooms.count) >= 1 ? .orange : .blue)
 
             Button {
-                isShowingRoomLimitPaywall = true
+                viewModel.showRoomLimitPaywall()
             } label: {
                 Label("Unlock unlimited rooms", systemImage: "crown")
                     .font(.subheadline)
@@ -240,7 +189,7 @@ private extension RoomsTabView {
             Text("Create your first room.")
         } actions: {
             Button("Create Room") {
-                openModalSheet = true
+                viewModel.isShowingNewRoomSheet = true
             }
         }
     }
@@ -251,9 +200,9 @@ private extension RoomsTabView {
         } description: {
             Text("Try another search or room type.")
         } actions: {
-            if hasActiveFilters {
+            if viewModel.hasActiveFilters {
                 Button("Clear Filters") {
-                    clearFilters()
+                    viewModel.clearFilters()
                 }
             }
         }
@@ -261,7 +210,7 @@ private extension RoomsTabView {
 
     var filterMenu: some View {
         Menu {
-            Picker("Room Type", selection: $selectedRoomType) {
+            Picker("Room Type", selection: selectedRoomTypeBinding) {
                 Text("All").tag(nil as RoomType?)
 
                 ForEach(RoomType.allCases) { type in
@@ -269,40 +218,66 @@ private extension RoomsTabView {
                 }
             }
         } label: {
-            Label("Filter", systemImage: selectedRoomType == nil ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill")
+            Label("Filter", systemImage: viewModel.selectedRoomType == nil ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill")
         }
         .accessibilityLabel("Filter Rooms")
     }
 
     func deleteRooms(_ roomsToDelete: [Room]) {
-        roomRepository.deleteRooms(roomsToDelete)
+        viewModel.deleteRooms(roomsToDelete)
     }
 
     func itemCountTitle(for count: Int) -> String {
         count == 1 ? "1 item" : "\(count) items"
     }
 
-    var roomsRemaining: Int {
-        max(0, AppPlan.freeRoomLimit - rooms.count)
-    }
-
-    var roomLimitProgress: Double {
-        Double(min(rooms.count, AppPlan.freeRoomLimit)) / Double(AppPlan.freeRoomLimit)
-    }
-
-    var roomLimitTitle: String {
-        if roomsRemaining == 0 {
-            return "Free room limit reached"
+    var searchTextBinding: Binding<String> {
+        Binding {
+            viewModel.searchText
+        } set: { searchText in
+            viewModel.searchText = searchText
         }
-
-        if roomsRemaining == 1 {
-            return "1 free room left"
-        }
-
-        return "\(roomsRemaining) free rooms left"
     }
 
-    var roomLimitSubtitle: String {
-        "\(rooms.count) of \(AppPlan.freeRoomLimit) rooms used on the free plan."
+    var selectedRoomTypeBinding: Binding<RoomType?> {
+        Binding {
+            viewModel.selectedRoomType
+        } set: { roomType in
+            viewModel.selectedRoomType = roomType
+        }
+    }
+
+    var isShowingNewRoomSheetBinding: Binding<Bool> {
+        Binding {
+            viewModel.isShowingNewRoomSheet
+        } set: { isPresented in
+            viewModel.isShowingNewRoomSheet = isPresented
+        }
+    }
+
+    var roomToEditBinding: Binding<Room?> {
+        Binding {
+            viewModel.roomToEdit
+        } set: { room in
+            viewModel.roomToEdit = room
+        }
+    }
+
+    var isShowingRoomLimitPaywallBinding: Binding<Bool> {
+        Binding {
+            viewModel.isShowingRoomLimitPaywall
+        } set: { isPresented in
+            viewModel.isShowingRoomLimitPaywall = isPresented
+        }
+    }
+
+    var errorAlertBinding: Binding<Bool> {
+        Binding {
+            viewModel.errorMessage != nil
+        } set: { isPresented in
+            if !isPresented {
+                viewModel.clearError()
+            }
+        }
     }
 }

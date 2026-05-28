@@ -166,15 +166,23 @@ struct PaywallView: View {
             return "Loading subscription"
         }
 
+        if subscriptionManager.proProduct == nil {
+            return "Subscription unavailable"
+        }
+
         return "Start 7-day free trial"
     }
 
     private var priceSubtitle: String {
-        if subscriptionManager.proProduct == nil {
-            return "7 days free, then $9/week. Auto-renews. Cancel anytime."
+        if subscriptionManager.isLoadingProducts {
+            return "Loading trial details from the App Store."
         }
 
-        return "7 days free, then \(subscriptionManager.proPriceTitle). Auto-renews. Cancel anytime."
+        guard let proPriceTitle = subscriptionManager.proPriceTitle else {
+            return "Trial details will appear after the App Store product loads."
+        }
+
+        return "7 days free, then \(proPriceTitle). Auto-renews. Cancel anytime."
     }
 }
 

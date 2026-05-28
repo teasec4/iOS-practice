@@ -10,10 +10,16 @@ import SwiftData
 
 @main
 struct backtogameApp: App {
-    private let dependencies = AppDependencies.live
-    @State private var subscriptionManager = SubscriptionManager(
-        purchaseService: AppDependencies.live.purchaseService
-    )
+    private let dependencies: AppDependencies
+    @State private var subscriptionManager: SubscriptionManager
+
+    init() {
+        let dependencies = AppDependencies.live
+        self.dependencies = dependencies
+        self._subscriptionManager = State(
+            initialValue: SubscriptionManager(purchaseService: dependencies.purchaseService)
+        )
+    }
 
     var body: some Scene {
         WindowGroup {

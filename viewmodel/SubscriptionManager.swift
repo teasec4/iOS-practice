@@ -97,9 +97,9 @@ final class SubscriptionManager {
         }
     }
 
-    var proPriceTitle: String {
+    var proPriceTitle: String? {
         guard let proProduct else {
-            return "$9/week"
+            return nil
         }
 
         return "\(proProduct.displayPrice)/\(subscriptionPeriodTitle(for: proProduct))"

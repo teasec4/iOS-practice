@@ -15,6 +15,7 @@ struct ContentView: View {
     @Environment(\.appDependencies) private var dependencies
     @AppStorage("didSeedRooms") private var didSeedRooms = false
     @Query private var rooms: [Room]
+    @State private var seedErrorMessage: String?
 
     init(onResetOnboarding: @escaping () -> Void = {}) {
         self.onResetOnboarding = onResetOnboarding
@@ -49,6 +50,13 @@ struct ContentView: View {
         .onAppear {
             seedRoomsIfNeeded()
         }
+        .alert("Could not prepare sample rooms", isPresented: seedErrorAlertBinding) {
+            Button("OK", role: .cancel) {
+                seedErrorMessage = nil
+            }
+        } message: {
+            Text(seedErrorMessage ?? "")
+        }
     }
 
     func seedRoomsIfNeeded() {
@@ -56,8 +64,22 @@ struct ContentView: View {
             return
         }
 
-        roomRepository.seedSampleRoomsIfNeeded(existingRooms: rooms)
-        didSeedRooms = true
+        do {
+            try roomRepository.seedSampleRoomsIfNeeded(existingRooms: rooms)
+            didSeedRooms = true
+        } catch {
+            seedErrorMessage = error.localizedDescription
+        }
+    }
+
+    private var seedErrorAlertBinding: Binding<Bool> {
+        Binding {
+            seedErrorMessage != nil
+        } set: { isPresented in
+            if !isPresented {
+                seedErrorMessage = nil
+            }
+        }
     }
 }
 
