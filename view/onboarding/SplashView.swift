@@ -94,7 +94,7 @@ struct SplashView: View {
                 .frame(width: 126, height: 126)
                 .scaleEffect(isAnimating ? 0.96 : 1.08)
 
-            Image(systemName: "house.and.flag")
+            Image(systemName: "house")
                 .font(.system(size: 58, weight: .semibold))
                 .foregroundStyle(.white)
                 .frame(width: 112, height: 112)
