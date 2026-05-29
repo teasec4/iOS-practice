@@ -11,6 +11,7 @@ struct SettingsTabView: View {
     let onResetOnboarding: () -> Void
 
     @AppStorage("userProfileData") private var userProfileData = ""
+    @AppStorage("selectedAppTheme") private var selectedAppTheme = AppTheme.system.rawValue
     @Environment(SubscriptionManager.self) private var subscriptionManager
     @State private var isShowingSettingsPaywall = false
     @State private var isShowingManageSubscriptions = false
@@ -24,10 +25,16 @@ struct SettingsTabView: View {
             List {
                 Section("Plan") {
                     HStack {
-                        Label(subscriptionManager.isProUser ? "Pro" : "Free", systemImage: subscriptionManager.isProUser ? "crown" : "person")
+                        Label(planTitle, systemImage: planSystemImage)
                         Spacer()
-                        Text(subscriptionManager.isProUser ? "Active" : "Free version")
-                            .foregroundStyle(.secondary)
+
+                        if subscriptionManager.hasResolvedAccessLevel {
+                            Text(planStatusTitle)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            ProgressView()
+                                .controlSize(.small)
+                        }
                     }
                 }
 
@@ -35,9 +42,11 @@ struct SettingsTabView: View {
                     profileSection(userProfile)
                 }
 
-                if !subscriptionManager.isProUser {
+                if subscriptionManager.shouldShowFreePlanMarketing {
                     premiumTeaserSection
                 }
+
+                appearanceSection
 
                 Section("Purchases") {
                     Button {
@@ -98,6 +107,39 @@ struct SettingsTabView: View {
 }
 
 private extension SettingsTabView {
+    var planTitle: String {
+        switch subscriptionManager.accessLevel {
+        case .unknown:
+            "Checking"
+        case .free:
+            "Free"
+        case .pro:
+            "Pro"
+        }
+    }
+
+    var planStatusTitle: String {
+        switch subscriptionManager.accessLevel {
+        case .unknown:
+            "Syncing"
+        case .free:
+            "Free version"
+        case .pro:
+            "Active"
+        }
+    }
+
+    var planSystemImage: String {
+        switch subscriptionManager.accessLevel {
+        case .unknown:
+            "clock"
+        case .free:
+            "person"
+        case .pro:
+            "crown"
+        }
+    }
+
     func profileSection(_ profile: UserProfile) -> some View {
         Section("Personal Summary") {
             VStack(alignment: .leading, spacing: 8) {
@@ -141,6 +183,17 @@ private extension SettingsTabView {
                 .controlSize(.small)
             }
             .padding(.vertical, 6)
+        }
+    }
+
+    var appearanceSection: some View {
+        Section("Appearance") {
+            Picker("Theme", selection: $selectedAppTheme) {
+                ForEach(AppTheme.allCases) { theme in
+                    Label(theme.title, systemImage: theme.systemImage)
+                        .tag(theme.rawValue)
+                }
+            }
         }
     }
 }

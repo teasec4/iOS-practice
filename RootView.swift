@@ -10,6 +10,7 @@ import SwiftData
 struct RootView: View {
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @AppStorage("userProfileData") private var userProfileData = ""
+    @AppStorage("selectedAppTheme") private var selectedAppTheme = AppTheme.system.rawValue
     @State private var rootState: RootState = .splash
 
     var body: some View {
@@ -33,6 +34,7 @@ struct RootView: View {
                 .transition(.opacity)
             }
         }
+        .preferredColorScheme(appTheme.colorScheme)
         .animation(.smooth, value: rootState)
         .task {
             await finishSplash()
@@ -48,6 +50,10 @@ struct RootView: View {
 
     private var currentDestination: RootState {
         hasCompletedOnboarding ? .main : .onboarding
+    }
+
+    private var appTheme: AppTheme {
+        AppTheme(rawValue: selectedAppTheme) ?? .system
     }
 
     private func finishSplash() async {

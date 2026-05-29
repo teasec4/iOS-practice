@@ -58,7 +58,7 @@ struct RoomsTabView: View {
                     viewModel.saveNewRoom(
                         draft: draft,
                         currentRoomCount: rooms.count,
-                        isProUser: subscriptionManager.isProUser
+                        isProUser: canCreateRoomsWithoutFreeLimit
                     )
                 },
                 onCancel: {
@@ -104,7 +104,7 @@ struct RoomsTabView: View {
 private extension RoomsTabView {
     var roomsList: some View {
         List {
-            if !subscriptionManager.isProUser {
+            if subscriptionManager.shouldShowFreePlanMarketing {
                 Section {
                     freePlanLimitBanner
                 }
@@ -229,6 +229,10 @@ private extension RoomsTabView {
 
     func itemCountTitle(for count: Int) -> String {
         count == 1 ? "1 item" : "\(count) items"
+    }
+
+    var canCreateRoomsWithoutFreeLimit: Bool {
+        subscriptionManager.isProUser || !subscriptionManager.hasResolvedAccessLevel
     }
 
     var searchTextBinding: Binding<String> {

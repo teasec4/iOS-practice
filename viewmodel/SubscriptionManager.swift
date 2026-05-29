@@ -9,6 +9,7 @@ import Observation
 import StoreKit
 
 enum SubscriptionAccessLevel {
+    case unknown
     case free
     case pro
 }
@@ -75,7 +76,7 @@ enum SubscriptionOperationState {
 @Observable
 final class SubscriptionManager {
     private(set) var products: [Product] = []
-    private(set) var accessLevel: SubscriptionAccessLevel = .free
+    private(set) var accessLevel: SubscriptionAccessLevel = .unknown
     private(set) var catalogState: SubscriptionCatalogState = .idle
     private(set) var operationState: SubscriptionOperationState = .idle
 
@@ -109,6 +110,14 @@ final class SubscriptionManager {
         accessLevel == .pro
     }
 
+    var hasResolvedAccessLevel: Bool {
+        accessLevel != .unknown
+    }
+
+    var shouldShowFreePlanMarketing: Bool {
+        accessLevel == .free
+    }
+
     var isLoadingProducts: Bool {
         catalogState.isLoading
     }
@@ -139,8 +148,8 @@ final class SubscriptionManager {
             await self?.refreshEntitlements()
         }
 
-        await loadProducts()
         await refreshEntitlements()
+        await loadProducts()
     }
 
     func loadProducts() async {
