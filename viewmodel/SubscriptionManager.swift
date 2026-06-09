@@ -144,6 +144,7 @@ final class SubscriptionManager {
         }
 
         hasStarted = true
+        // безымянная функция в змыкании opUpdate
         transactionUpdatesTask = purchaseService.makeTransactionUpdatesTask { [weak self] in
             await self?.refreshEntitlements()
         }

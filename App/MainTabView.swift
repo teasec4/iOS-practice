@@ -1,5 +1,5 @@
 //
-//  ContentView.swift
+//  MainTabView.swift
 //  backtogame
 //
 //  Created by Максим Ковалев on 5/19/26.
@@ -8,7 +8,7 @@
 import SwiftUI
 import SwiftData
 
-struct ContentView: View {
+struct MainTabView: View {
     let onResetOnboarding: () -> Void
 
     @Environment(\.modelContext) private var modelContext
@@ -84,7 +84,7 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView()
+    MainTabView()
         .environment(\.appDependencies, .preview)
         .environment(SubscriptionManager.preview())
         .modelContainer(for: [Room.self, RoomItem.self], inMemory: true)

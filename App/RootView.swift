@@ -19,7 +19,7 @@ struct RootView: View {
             case .splash:
                 SplashView()
             case .main:
-                ContentView {
+                MainTabView {
                     userProfileData = ""
                     hasCompletedOnboarding = false
                     rootState = .onboarding

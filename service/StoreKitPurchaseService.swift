@@ -57,6 +57,7 @@ struct StoreKitPurchaseService: PurchaseService {
         try await AppStore.sync()
     }
 
+    // Transaction.updates
     func makeTransactionUpdatesTask(onUpdate: @escaping () async -> Void) -> Task<Void, Never> {
         Task {
             for await result in Transaction.updates {

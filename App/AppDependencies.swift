@@ -8,8 +8,14 @@ import SwiftData
 import SwiftUI
 
 struct AppDependencies: Sendable {
+    // апи для теста
     let weatherService: any WeatherService
+
+    // реализация через сторкит
     let purchaseService: any PurchaseService
+
+    // БД иницаилаизируется немного позже поэтому получаем контекст
+    // репозитоии для работы с данными
     let makeRoomRepository: @MainActor @Sendable (ModelContext) -> any RoomRepository
     let makeRoomItemRepository: @MainActor @Sendable (ModelContext) -> any RoomItemRepository
 }
